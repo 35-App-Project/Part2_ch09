@@ -16,8 +16,12 @@
         <meta-data
             android:name="com.choi.part2_ch09.KAKAO"
             android:value="${KAKAO}"/>
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}"/>
         <activity
-            android:name=".MainActivity"
+            android:name=".MapActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

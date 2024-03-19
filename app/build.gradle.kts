@@ -4,6 +4,8 @@ import java.util.Properties;
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
@@ -57,6 +59,9 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 
     implementation("com.kakao.sdk:v2-user:2.20.0")
+
+    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
+    implementation("com.google.android.gms:play-services-maps:18.1.0")
 }
 
 fun getApiKey(propertyKey: String): String {
