@@ -23,12 +23,6 @@
         <activity
             android:name=".MapActivity"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
         </activity>
 
         <activity
@@ -44,7 +38,15 @@
                     android:scheme="kakao${KAKAO}" />
             </intent-filter>
         </activity>
-        <activity android:name="com.choi.part2_ch09.LoginActivity" />
+        <activity android:name="com.choi.part2_ch09.LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name="com.choi.part2_ch09.EmailLoginActivity" />
 
     </application>
 

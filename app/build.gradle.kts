@@ -62,6 +62,12 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
     implementation("com.google.android.gms:play-services-maps:18.1.0")
+
+    // firebase auth
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
+
+
 }
 
 fun getApiKey(propertyKey: String): String {
