@@ -75,3 +75,5 @@ google-services.json
 hs_err_pid*
 replay_pid*
 
+/src/main/res/values/api_keys.xml
+
