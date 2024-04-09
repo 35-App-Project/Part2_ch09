@@ -71,6 +71,9 @@ dependencies {
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.14.2")
+
+    // Lottie
+    implementation("com.airbnb.android:lottie:5.2.0")
 }
 
 fun getApiKey(propertyKey: String): String {

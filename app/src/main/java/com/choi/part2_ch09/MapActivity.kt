@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.location.LocationManagerCompat.getCurrentLocation
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
@@ -36,11 +37,13 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.play.integrity.internal.m
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 
@@ -116,7 +119,10 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+
+
         requestLocationPermission()
+        setupEmojiAnimationView()
         setUpFirebaseDatabase()
     }
 
@@ -174,6 +180,37 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
         )
     }
 
+    private fun setupEmojiAnimationView() {
+        // Lottie 파일 동작 및 Firebase에 등록
+        binding.emojiLottieAnimationView.setOnClickListener {
+            if (trackingPersonId!="") {
+                val lastEmoji= mutableMapOf<String, Any>()
+                lastEmoji["type"]="smile"
+                lastEmoji["lastModifier"]=System.currentTimeMillis()
+                Firebase.database.reference.child("Emoji")
+                    .child(trackingPersonId)
+                    .updateChildren(lastEmoji)
+            }
+
+            binding.emojiLottieAnimationView.playAnimation()
+            binding.dummyLottieAnimationView.animate()
+                .scaleY(3f)
+                .scaleX(3f)
+                .alpha(0f)
+                .withStartAction {
+                    binding.dummyLottieAnimationView.scaleX=1f
+                    binding.dummyLottieAnimationView.scaleY=1f
+                    binding.dummyLottieAnimationView.alpha=1f
+                }.withEndAction {
+                    binding.dummyLottieAnimationView.scaleX=1f
+                    binding.dummyLottieAnimationView.scaleY=1f
+                    binding.dummyLottieAnimationView.alpha=1f
+                }.start()
+        }
+        binding.centerLottieAnimationView.speed=3f
+        binding.emojiLottieAnimationView.speed=3f
+    }
+
     private fun setUpFirebaseDatabase() {
         Firebase.database.reference.child("Person")
             .addChildEventListener(object : ChildEventListener {
@@ -214,6 +251,28 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
                 }
 
                 override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+                override fun onCancelled(error: DatabaseError) {}
+
+            })
+
+        // 이모지 데이터가 바뀔 때 반응을 보여줌
+        Firebase.database.reference.child("Emoji").child(Firebase.auth.currentUser?.uid ?: "")
+            .addValueEventListener(object: ValueEventListener{
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    binding.centerLottieAnimationView.playAnimation()
+                    // animate 커스텀
+                    binding.centerLottieAnimationView.animate()
+                        .scaleX(7f)
+                        .scaleY(7f)
+                        .alpha(0.3f)
+                        .setDuration(binding.centerLottieAnimationView.duration/3)
+                        .withEndAction {
+                            binding.centerLottieAnimationView.scaleX=0f
+                            binding.centerLottieAnimationView.scaleY=0f
+                            binding.centerLottieAnimationView.alpha=1f
+                        }.start()
+                }
+
                 override fun onCancelled(error: DatabaseError) {}
 
             })
@@ -293,6 +352,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
     override fun onMarkerClick(marker: Marker): Boolean {
 
         trackingPersonId = marker.tag as? String ?: ""
+        // Bottom sheet 동작
+        val behavior=BottomSheetBehavior.from(binding.emojiBottomSheetLayout)
+        behavior.state=BottomSheetBehavior.STATE_EXPANDED
         return false
     }
 }
