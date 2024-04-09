@@ -2,14 +2,22 @@ package com.choi.part2_ch09
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
+import android.view.RoundedCorner
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import com.choi.part2_ch09.databinding.ActivityMapBinding
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
@@ -19,8 +27,12 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
@@ -32,12 +44,13 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener {
 
     private lateinit var binding: ActivityMapBinding
     private lateinit var mMap: GoogleMap
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
+    private var trackingPersonId: String = ""
     private val markerMap = hashMapOf<String, Marker>()
 
     @RequiresApi(Build.VERSION_CODES.N)
@@ -169,7 +182,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     val uid = person.uid ?: return
 
                     if (markerMap[uid] == null) {
-                        markerMap[uid] = makeNewMarker(person,uid) ?: return
+                        markerMap[uid] = makeNewMarker(person, uid) ?: return
                     }
                 }
 
@@ -177,13 +190,22 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     val person = snapshot.getValue(Person::class.java) ?: return
                     val uid = person.uid ?: return
 
-
-
                     if (markerMap[uid] == null) {
-                        markerMap[uid] = makeNewMarker(person,uid) ?: return
+                        markerMap[uid] = makeNewMarker(person, uid) ?: return
                     } else {
                         markerMap[uid]?.position =
                             LatLng(person.latitude ?: 0.0, person.latitude ?: 0.0)
+                    }
+                    // 위치가 갱신된 uid와 추적하고 있는 uid가 같은지 비교
+                    if (trackingPersonId == uid) {
+                        mMap.animateCamera(
+                            CameraUpdateFactory.newCameraPosition(
+                                CameraPosition.Builder()
+                                    .target(LatLng(person.latitude ?: 0.0, person.latitude ?: 0.0))
+                                    .zoom(16.0f)
+                                    .build()
+                            )
+                        )
                     }
                 }
 
@@ -197,7 +219,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             })
     }
 
-    private fun makeNewMarker(person: Person, uid:String) : Marker? {
+    private fun makeNewMarker(person: Person, uid: String): Marker? {
         val marker = mMap.addMarker(
             MarkerOptions().position(
                 LatLng(
@@ -206,6 +228,48 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 )
             ).title(person.name.orEmpty())
         ) ?: return null
+
+        // tag 를 달아 구분하기 위함
+        marker.tag = uid
+
+        Glide.with(this)
+            .asBitmap()
+            .load(person.profilePhoto)
+            .transform(RoundedCorners(60))
+            // 사이즈 조정
+            .override(200)
+            .listener(object : RequestListener<Bitmap> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Bitmap>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false
+                }
+
+                // UI Thread에서 작업되지 않는다
+                override fun onResourceReady(
+                    resource: Bitmap?,
+                    model: Any?,
+                    target: Target<Bitmap>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    // 마커 찍는 동작은 UI Thread 에서 이뤄져야한다
+                    runOnUiThread {
+                        resource?.let {
+                            // 마커 커스텀 방법
+                            marker.setIcon(
+                                BitmapDescriptorFactory.fromBitmap(
+                                    resource
+                                )
+                            )
+                        }
+                    }
+                    return true
+                }
+            }).submit()
 
         return marker
     }
@@ -217,5 +281,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.setMaxZoomPreference(20.0f)
         mMap.setMinZoomPreference(10.0f)
 
+        // 마커 Click 리스너 달기
+        mMap.setOnMarkerClickListener(this)
+        // 트래킹 중지
+        mMap.setOnMapClickListener {
+            trackingPersonId=""
+        }
+    }
+
+    // 마커 클릭 시 동작 -> onMarkerClickListener Interface 이용
+    override fun onMarkerClick(marker: Marker): Boolean {
+
+        trackingPersonId = marker.tag as? String ?: ""
+        return false
     }
 }

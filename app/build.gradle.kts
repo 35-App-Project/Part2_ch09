@@ -68,6 +68,9 @@ dependencies {
 
     // Location Service
     implementation("com.google.android.gms:play-services-location:21.2.0")
+
+    // Glide
+    implementation("com.github.bumptech.glide:glide:4.14.2")
 }
 
 fun getApiKey(propertyKey: String): String {
