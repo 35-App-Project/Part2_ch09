@@ -119,10 +119,9 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-
-
         requestLocationPermission()
         setupEmojiAnimationView()
+        setupCurrentLocationView()
         setUpFirebaseDatabase()
     }
 
@@ -161,13 +160,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
             Looper.getMainLooper()
         )
 
-        fusedLocationClient.lastLocation.addOnSuccessListener {
-            mMap.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(it.latitude, it.longitude), 16.0f
-                )
-            )
-        }
+        moveLastLocation()
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
@@ -209,6 +202,36 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
         }
         binding.centerLottieAnimationView.speed=3f
         binding.emojiLottieAnimationView.speed=3f
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    private fun setupCurrentLocationView() {
+        binding.currentLocationButton.setOnClickListener {
+            trackingPersonId=""
+            moveLastLocation()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    private fun moveLastLocation() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestLocationPermission()
+            return
+        }
+        fusedLocationClient.lastLocation.addOnSuccessListener {
+            mMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(it.latitude, it.longitude), 16.0f
+                )
+            )
+        }
     }
 
     private fun setUpFirebaseDatabase() {
@@ -257,8 +280,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
 
         // 이모지 데이터가 바뀔 때 반응을 보여줌
         Firebase.database.reference.child("Emoji").child(Firebase.auth.currentUser?.uid ?: "")
-            .addValueEventListener(object: ValueEventListener{
-                override fun onDataChange(snapshot: DataSnapshot) {
+            .addChildEventListener(object: ChildEventListener{
+                override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {}
+
+                override fun onChildChanged(snapshot: DataSnapshot, previousChildName:String?) {
+
                     binding.centerLottieAnimationView.playAnimation()
                     // animate 커스텀
                     binding.centerLottieAnimationView.animate()
@@ -272,7 +298,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListen
                             binding.centerLottieAnimationView.alpha=1f
                         }.start()
                 }
-
+                override fun onChildRemoved(snapshot: DataSnapshot) {}
+                override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
                 override fun onCancelled(error: DatabaseError) {}
 
             })
